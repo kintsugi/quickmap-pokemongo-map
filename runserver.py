@@ -10,6 +10,7 @@ import re
 import requests
 import ssl
 import json
+import pprint
 
 from distutils.version import StrictVersion
 
@@ -30,8 +31,7 @@ from pogom.webhook import wh_updater
 pgoapi_version = "1.1.7"
 
 # Moved here so logger is configured at load time
-logging.basicConfig(format='%(asctime)s [%(threadName)16s][%(module)14s][%(levelname)8s] %(message)s')
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 # Make sure pogom/pgoapi is actually removed if it is an empty directory
 # This is a leftover directory from the time pgoapi was embedded in PokemonGo-Map
@@ -57,7 +57,12 @@ if not hasattr(pgoapi, "__version__") or StrictVersion(pgoapi.__version__) < Str
 
 
 def main():
-    args = get_args()
+    print(sys.argv[1:])
+    # args = get_args()
+    # print(pprint.pprint(vars(args), indent=1));
+
+
+def test():
 
     # Check for depreciated argumented
     if args.debug:

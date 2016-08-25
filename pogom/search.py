@@ -25,6 +25,7 @@ import random
 import time
 import geopy
 import geopy.distance
+import pprint
 
 from operator import itemgetter
 from threading import Thread
@@ -62,8 +63,8 @@ def cur_sec():
 
 
 # Thread to handle user input
-def switch_status_printer(display_enabled, current_page):
-    while True:
+def switch_status_printer(stop_bit, display_enabled, current_page):
+    while not stop_bit.is_set():
         # Wait for the user to press a key
         command = raw_input()
 
@@ -80,7 +81,7 @@ def switch_status_printer(display_enabled, current_page):
 
 
 # Thread to print out the status of each worker
-def status_printer(threadStatus, search_items_queue, db_updates_queue, wh_queue):
+def status_printer(stop_bit, threadStatus, search_items_queue, db_updates_queue, wh_queue):
     display_enabled = [True]
     current_page = [1]
     logging.disable(logging.ERROR)
@@ -88,11 +89,11 @@ def status_printer(threadStatus, search_items_queue, db_updates_queue, wh_queue)
     # Start another thread to get user input
     t = Thread(target=switch_status_printer,
                name='switch_status_printer',
-               args=(display_enabled, current_page))
+               args=(stop_bit, display_enabled, current_page))
     t.daemon = True
     t.start()
 
-    while True:
+    while not stop_bit.is_set():
         if display_enabled[0]:
 
             # Get the terminal size
@@ -164,7 +165,7 @@ def status_printer(threadStatus, search_items_queue, db_updates_queue, wh_queue)
 
 
 # The main search loop that keeps an eye on the over all process
-def search_overseer_thread(args, method, new_location_queue, pause_bit, encryption_lib_path, db_updates_queue, wh_queue):
+def search_overseer_thread(args, method, new_location_queue, stop_bit, pause_bit, encryption_lib_path, db_updates_queue, wh_queue):
 
     log.info('Search overseer starting')
 
@@ -181,7 +182,7 @@ def search_overseer_thread(args, method, new_location_queue, pause_bit, encrypti
         log.info('Starting status printer thread')
         t = Thread(target=status_printer,
                    name='status_printer',
-                   args=(threadStatus, search_items_queue, db_updates_queue, wh_queue))
+                   args=(stop_bit, threadStatus, search_items_queue, db_updates_queue, wh_queue))
         t.daemon = True
         t.start()
 
@@ -202,7 +203,7 @@ def search_overseer_thread(args, method, new_location_queue, pause_bit, encrypti
 
         t = Thread(target=search_worker_thread,
                    name='search-worker-{}'.format(i),
-                   args=(args, account, search_items_queue, pause_bit,
+                   args=(args, account, search_items_queue, stop_bit, pause_bit,
                          encryption_lib_path, threadStatus[workerId],
                          db_updates_queue, wh_queue))
         t.daemon = True
@@ -230,7 +231,7 @@ def search_overseer_thread(args, method, new_location_queue, pause_bit, encrypti
     sps_scan_current = True
 
     # The real work starts here but will halt on pause_bit.set()
-    while True:
+    while not stop_bit.is_set():
 
         # paused; clear queue if needed, otherwise sleep and loop
         while pause_bit.is_set():
@@ -410,14 +411,14 @@ def get_sps_location_list(args, current_location, sps_scan_current):
     return retset
 
 
-def search_worker_thread(args, account, search_items_queue, pause_bit, encryption_lib_path, status, dbq, whq):
+def search_worker_thread(args, account, search_items_queue, stop_bit, pause_bit, encryption_lib_path, status, dbq, whq):
 
     stagger_thread(args, account)
 
     log.debug('Search worker thread starting')
 
     # The forever loop for the thread
-    while True:
+    while not stop_bit.is_set():
         try:
             # New lease of life right here
             status['fail'] = 0
@@ -583,8 +584,12 @@ def map_request(api, position, jitter=False):
 
 # Delay each thread start time so that logins only occur ~1s
 def stagger_thread(args, account):
-    if args.accounts.index(account) == 0:
-        return  # No need to delay the first one
+    try:
+        if args.accounts.index(account) == 0:
+            return  # No need to delay the first one
+    except Exception as e:
+        return
+
     delay = args.accounts.index(account) + ((random.random() - .5) / 2)
     log.debug('Delaying thread startup for %.2f seconds', delay)
     time.sleep(delay)

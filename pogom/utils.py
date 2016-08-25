@@ -12,6 +12,9 @@ import shutil
 import platform
 import pprint
 import time
+import traceback
+
+from worker_args import get_worker_args
 
 from . import config
 
@@ -43,7 +46,6 @@ def memoize(function):
     return wrapper
 
 
-@memoize
 def get_args():
     # fuck PEP8
     configpath = os.path.join(os.path.dirname(__file__), '../config/config.ini')
@@ -161,7 +163,9 @@ def get_args():
     verbosity.add_argument('-d', '--debug', help='Depreciated, use -v or -vv instead.', action='store_true')
     parser.set_defaults(DEBUG=False)
 
-    args = parser.parse_args()
+    worker_args = get_worker_args()
+
+    args = parser.parse_args(worker_args)
 
     if args.only_server:
         if args.location is None:
