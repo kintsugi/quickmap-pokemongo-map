@@ -34,6 +34,7 @@ class MyRetryDB(RetryOperationalError, PooledMySQLDatabase):
 
 
 def init_database(app):
+    args = get_args()
     if args.db_type == 'mysql':
         log.info('Connecting to MySQL database on %s:%i', args.db_host, args.db_port)
         connections = args.db_max_connections
