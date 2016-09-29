@@ -438,20 +438,18 @@ def search_worker_thread(args, account, search_items_queue, stop_bit, pause_bit,
             api.activate_signature(encryption_lib_path)
 
             # The forever loop for the searches
-            while True:
+            while stop_bit.is_set():
 
                 # If this account has been messing up too hard, let it rest
                 if status['fail'] >= args.max_failures:
                     end_sleep = now() + (3600 * 2)
                     long_sleep_started = time.strftime('%H:%M:%S')
-                    while now() < end_sleep:
-                        status['message'] = 'Worker {} failed more than {} scans; possibly banned account. Stopping thread and notifying command.'.format(account['username'], args.max_failures, long_sleep_started)
-                        log.error(status['message'])
-                        banned_account = (account['username'], account['password'])
-                        baq.put(banned_account)
-                        stop_bit.set()
-
-                        #stop the search thread, and notify c&c
+                    status['message'] = 'Worker {} failed more than {} scans; possibly banned account. Stopping thread and notifying command.'.format(account['username'], args.max_failures, long_sleep_started)
+                    log.error(status['message'])
+                    banned_account = (account['username'], account['password'])
+                    baq.put(banned_account)
+                    stop_bit.set()
+                    #stop the search thread, and notify c&c
                     break  # exit this loop to have the API recreated
 
                 while pause_bit.is_set():
