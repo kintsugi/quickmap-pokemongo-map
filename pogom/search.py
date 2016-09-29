@@ -438,7 +438,7 @@ def search_worker_thread(args, account, search_items_queue, stop_bit, pause_bit,
             api.activate_signature(encryption_lib_path)
 
             # The forever loop for the searches
-            while stop_bit.is_set():
+            while not stop_bit.is_set():
 
                 # If this account has been messing up too hard, let it rest
                 if status['fail'] >= args.max_failures:
