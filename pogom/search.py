@@ -165,7 +165,7 @@ def status_printer(stop_bit, threadStatus, search_items_queue, db_updates_queue,
 
 
 # The main search loop that keeps an eye on the over all process
-def search_overseer_thread(args, method, new_location_queue, stop_bit, pause_bit, encryption_lib_path, db_updates_queue, wh_queue, banned_accounts_queue):
+def search_overseer_thread(args, method, new_location_queue, stop_bit, pause_bit, encryption_lib_path, db_updates_queue, wh_queue, banned_accounts_queue, point):
 
     log.info('Search overseer starting')
 
@@ -444,11 +444,16 @@ def search_worker_thread(args, account, search_items_queue, stop_bit, pause_bit,
                 if status['fail'] >= args.max_failures:
                     end_sleep = now() + (3600 * 2)
                     long_sleep_started = time.strftime('%H:%M:%S')
-                    status['message'] = 'Worker {} failed more than {} scans; possibly banned account. Stopping thread and notifying command.'.format(account['username'], args.max_failures, long_sleep_started)
-                    log.error(status['message'])
-                    banned_account = (account['username'], account['password'])
-                    baq.put(banned_account)
-                    stop_bit.set()
+                    while now() < end_sleep:
+                        status['message'] = 'Worker {} failed more than {} scans; possibly banned account. Sleeping for 2 hour sleep as of {}'.format(account['username'], args.max_failures, long_sleep_started)
+                        log.error(status['message'])
+                        time.sleep(300)
+                    # status['message'] = 'Worker {} failed more than {} scans; possibly banned account. Stopping thread and notifying command.'.format(account['username'], args.max_failures, long_sleep_started)
+                    # status['message'] = 'Worker {} failed more than {} scans; possibly banned account.'.format(account['username'], args.max_failures, long_sleep_started)
+                    # log.error(status['message'])
+                    # banned_account = (account['username'], account['password'])
+                    # baq.put(banned_account)
+                    # stop_bit.set()
                     #stop the search thread, and notify c&c
                     break  # exit this loop to have the API recreated
 
