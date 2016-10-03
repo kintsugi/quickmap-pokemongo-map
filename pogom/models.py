@@ -8,13 +8,14 @@ import time
 import geopy
 from peewee import SqliteDatabase, InsertQuery, \
     IntegerField, CharField, DoubleField, BooleanField, \
-    DateTimeField, CompositeKey, fn
+    DateTimeField, CompositeKey, fn, BigIntegerField
 from playhouse.flask_utils import FlaskDB
 from playhouse.pool import PooledMySQLDatabase
 from playhouse.shortcuts import RetryOperationalError
 from playhouse.migrate import migrate, MySQLMigrator, SqliteMigrator
 from datetime import datetime, timedelta
 from base64 import b64encode
+import pprint
 
 from . import config
 from .utils import get_pokemon_name, get_pokemon_rarity, get_pokemon_types, get_args
@@ -76,6 +77,7 @@ class Pokemon(BaseModel):
     # because they are too big for sqlite to handle
     encounter_id = CharField(primary_key=True, max_length=50)
     spawnpoint_id = CharField(index=True)
+    cell_id = CharField(index=True)
     pokemon_id = IntegerField(index=True)
     latitude = DoubleField()
     longitude = DoubleField()
@@ -420,6 +422,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue):
                 pokemons[p['encounter_id']] = {
                     'encounter_id': b64encode(str(p['encounter_id'])),
                     'spawnpoint_id': p['spawn_point_id'],
+                    'cell_id': b64encode(str(cell.get('s2_cell_id', []))),
                     'pokemon_id': p['pokemon_data']['pokemon_id'],
                     'latitude': p['latitude'],
                     'longitude': p['longitude'],
